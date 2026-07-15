@@ -1,7 +1,7 @@
 {
   "name": "ziarmy",
   "description": "Ziarmy — a multi-agent development force: dev-team breaks work into parallel tasks and builds it, deploy-team ships it. Fixed model orchestration: Sonnet 5 executors, Opus 4.8 reviewers between tasks, one Fable 5 advisor/architect, up to 10 concurrent agents, caveman-terse communication.",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "author": {
     "name": "Ziad Abdelsalam",
     "email": "ziad_abdelsalam@outlook.com"

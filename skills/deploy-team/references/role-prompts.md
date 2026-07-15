@@ -1,5 +1,7 @@
 # Deploy Team — Role Prompt Templates
 
+**Prefer agent types**: when the ziarmy agents are installed (`~/.claude/agents/` or the ziarmy plugin), spawn with `subagent_type: "ziarmy-advisor" / "ziarmy-deploy-executor" / "ziarmy-deploy-reviewer"` (plugin: `ziarmy:ziarmy-…`) and send ONLY the `{placeholder}` lines from the templates below — draft-only, no-secrets, and fix-authority rules are baked into the agent definitions. The full templates are the fallback for `general-purpose` + `model` param.
+
 Fill the `{placeholders}` and pass as the Agent tool `prompt`. Point agents at files (deploy plan, playbook section, artifact paths) rather than pasting content.
 
 ## Advisor (Fable 5, spawn exactly once)

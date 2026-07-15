@@ -21,6 +21,9 @@ Set these via the Agent tool's `model` parameter — these are the only valid va
 Hard limits:
 - **At most 10 agents running concurrently** across all roles. Track the count; queue excess tasks for the next wave.
 - **Never spawn a second advisor.** Spawn the advisor once, record its agent ID/name, and route every later architecture question to it via `SendMessage` so it keeps full context. Multiple concurrent executors and reviewers are expected.
+- **Scale to the job.** Honor user sizing args (`team=N`, `--solo`). Solo mode = one executor + one reviewer, advisor only if there is design surface. A two-file change never needs a 10-agent army.
+
+**Agent types**: when the ziarmy agents are installed (`~/.claude/agents/` or the ziarmy plugin), spawn by type — `subagent_type: "ziarmy-advisor" / "ziarmy-executor" / "ziarmy-reviewer"` (plugin-namespaced: `ziarmy:ziarmy-executor`, …). Model and tool guardrails are baked in, so the spawn prompt carries only the task-specific lines (plan path, task ID, owned files, done-check). Fallback when absent: `general-purpose` with the `model` param and the full templates in `references/role-prompts.md`.
 
 ## Communication — caveman mode
 
@@ -35,11 +38,13 @@ Spend tokens on thinking and code, not on talk. Detail lives in the plan file; m
 
 Decomposition quality decides everything downstream. Before spawning anything:
 
+0. If `.ziarmy/retro.md` exists in the repo, read it — past breakdown mistakes and reviewer patterns inform this decomposition.
 1. Scope the request against the actual codebase (run `graphify query "<question>"` first when `graphify-out/graph.json` exists, otherwise targeted search). Never decompose from assumptions.
 2. Produce a task list where every task has: an ID, a goal stated as a verifiable outcome, the exact files it owns, its dependencies (task IDs), and a done-check (test command or observable behavior).
 3. Enforce **exclusive file ownership**: no two tasks in the same wave may touch the same file. If two tasks need the same file, merge them or sequence them across waves.
 4. Group tasks into **waves**: wave 1 = tasks with no dependencies, wave 2 = tasks depending only on wave 1, etc. Maximize wave width — parallelism comes from wide waves, not more waves.
-5. Write the full plan to a scratchpad file (e.g. `<scratchpad>/team-plan.md`). Agents receive file paths plus their task ID, not pasted content — this is the token-efficient handoff.
+5. Write the full plan to a scratchpad file (e.g. `<scratchpad>/team-plan.md`) using `assets/plan-template.md` — keep its field names exactly; agents parse by heading. Agents receive file paths plus their task ID, not pasted content — this is the token-efficient handoff.
+6. Mirror the task graph into the harness task list: `TaskCreate` one entry per task ID, `TaskUpdate` as states flip (executing → in-review → approved). Live progress UI at zero message cost — this replaces any extra status prose.
 
 ### Step 2 — Advisor kickoff (architecture gate)
 
@@ -59,6 +64,8 @@ For each wave:
 1. Spawn all executors for the wave **in a single message with multiple Agent tool calls** so they run concurrently. Each executor gets `model: "sonnet"`, the plan file path plus its task ID, its owned files, and its done-check. Use the templates in `references/role-prompts.md`.
 2. If ownership boundaries are not airtight for a wave that mutates files, give those executors `isolation: "worktree"`; otherwise plain parallel execution in the shared tree is cheaper.
 3. Executors run in the background by default — as each one completes, immediately move it to review (Step 4). Do not wait for the whole wave before starting reviews.
+
+**Workflow mode**: at ≥6 tasks, ≥2 waves, or a user token budget ("+500k"), run the execute→review pipeline via the Workflow tool instead of hand-dispatching — see `references/workflow-mode.md`. Deterministic fan-out, runtime-enforced concurrency, crash resume. The advisor, must-fix rounds, escalations, and integration stay in the manager session.
 
 ### Step 4 — Review between tasks (the gate)
 
@@ -87,7 +94,8 @@ After the final wave clears review:
 2. If worktrees were used, merge them back sequentially, running tests after each merge.
 3. Run `graphify update .` if the project keeps a knowledge graph.
 4. Report to the user: what was built, task-by-task outcomes, review findings that mattered, advisor decisions made, and anything skipped or deferred.
-5. If the work is deployable, offer to hand off to the **deploy-team** skill — it picks up the plan file and the verified commit and runs the deployment with the same team model.
+5. Append a retro to `.ziarmy/retro.md` in the repo (create if missing; suggest gitignoring it): date, tasks approved/total, breakdown corrections the advisor made, reviewer verdict counts (approve/fixed/must-fix), one lesson. 2–5 lines, caveman format — future runs read this in Step 1.
+6. If the work is deployable, offer to hand off to the **deploy-team** skill — it picks up the plan file and the verified commit and runs the deployment with the same team model.
 
 ## Failure handling
 

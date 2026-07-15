@@ -1,5 +1,7 @@
 # Role Prompt Templates
 
+**Prefer agent types**: when the ziarmy agents are installed (`~/.claude/agents/` or the ziarmy plugin), spawn with `subagent_type: "ziarmy-advisor" / "ziarmy-executor" / "ziarmy-reviewer"` (plugin: `ziarmy:ziarmy-…`) and send ONLY the `{placeholder}` lines from the templates below (plan path, task ID, owned files, done-check, executor report) — the standing rules are baked into the agent definitions. The full templates are the fallback for `general-purpose` + `model` param.
+
 Fill the `{placeholders}` and pass as the Agent tool `prompt`. Keep prompts pointing at files (plan, specs, diffs) rather than pasting content — agents read what they need.
 
 ## Advisor (Fable 5, spawn exactly once)

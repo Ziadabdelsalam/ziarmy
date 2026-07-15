@@ -1,0 +1,47 @@
+name: validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+      - name: Validate plugin
+        run: claude plugin validate .
+      - name: Versions must match across manifests
+        run: |
+          p=$(jq -r .version .claude-plugin/plugin.json)
+          m=$(jq -r .metadata.version .claude-plugin/marketplace.json)
+          i=$(jq -r '.plugins[0].version' .claude-plugin/marketplace.json)
+          echo "plugin.json=$p marketplace.metadata=$m marketplace.plugins[0]=$i"
+          [ "$p" = "$m" ] && [ "$p" = "$i" ]
+
+  tag-release:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Tag new version
+        run: |
+          v="v$(jq -r .version .claude-plugin/plugin.json)"
+          if git rev-parse "$v" >/dev/null 2>&1; then
+            echo "$v already tagged"
+          else
+            git tag "$v"
+            git push origin "$v"
+            echo "tagged $v"
+          fi

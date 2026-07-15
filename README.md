@@ -9,8 +9,22 @@ A Claude Code plugin bundling two multi-agent team skills — **dev-team** build
 | Reviewer | Opus 4.8 (`model: "opus"`) | many | Gate every task before dependent work proceeds |
 | Advisor | Fable 5 (`model: "fable"`) | **exactly 1** | Architecture decisions and critical items |
 
-- **Cap** — at most 10 agents running concurrently.
+- **Cap** — at most 10 agents running concurrently, and the team scales to the job: `team=N` / `--solo` sizing args are honored, so a two-file change never spins up a 10-agent army.
 - **One advisor, ever** — spawned once before any executor; all later escalations return to the same agent via SendMessage so it keeps full context.
+
+## Bundled agent definitions (v1.3.0)
+
+The roles aren't just prompts — the plugin ships real agent definitions in `agents/`, so the guardrails are enforced by tool restrictions, not requested by prose:
+
+| Agent | Model | Enforced restrictions |
+|---|---|---|
+| `ziarmy-advisor` | Fable 5 | Read-only: no Write/Edit, no subagent spawning |
+| `ziarmy-executor` | Sonnet 5 | Full dev tools; cannot spawn subagents |
+| `ziarmy-reviewer` | Opus 4.8 | Can edit (fix authority) but not spawn subagents |
+| `ziarmy-deploy-executor` | Sonnet 5 | Draft-only + no-secrets rules baked into the system prompt |
+| `ziarmy-deploy-reviewer` | Opus 4.8 | Secrets scan first; fix authority; drafts only |
+
+Installed via the plugin they're namespaced (`ziarmy:ziarmy-executor`); `scripts/sync.sh` also copies them to `~/.claude/agents/` for standalone use. Spawning by agent type means the manager sends only the task-specific lines (plan path, task ID, owned files, done-check) — the standing rules live in the definitions. Without the agents installed, the skills fall back to `general-purpose` + the full templates in `references/role-prompts.md`.
 
 ## Skills
 
@@ -42,6 +56,18 @@ How it works:
 Two iron rules:
 1. **The provider is always the user's decision** — the team recommends, never picks silently.
 2. **Agents draft; only the manager ships** — executors and reviewers work on files and dry-runs; pushes, image pushes, `kubectl apply`, and deploys run from the main session, with explicit user confirmation before production, every time.
+
+## Structured plan files & live tracking (v1.3.0)
+
+Every run is driven by a parseable plan file with fixed headings — `skills/dev-team/assets/plan-template.md` for builds, `skills/deploy-team/assets/deploy-plan-template.md` for deploys (the deploy variant adds a secrets checklist, ship log, and runbook). Agents parse their task by heading; the manager mirrors the task graph into the harness task list (TaskCreate/TaskUpdate) so progress is visible live at zero message cost. The plan file is also the handoff contract from dev-team to deploy-team.
+
+## Workflow mode (v1.3.0)
+
+At ≥6 tasks, ≥2 waves, or a user token budget ("+500k"), dev-team switches from hand-dispatched agents to the Workflow tool (`skills/dev-team/references/workflow-mode.md`): a deterministic execute→review pipeline where each task's review starts the moment its executor finishes, concurrency is enforced by the runtime, crashed runs resume from cache, and token budgets are honored. The advisor, must-fix rounds, escalations, and integration stay with the manager.
+
+## Retro loop (v1.3.0)
+
+After every run, the manager appends 2–5 caveman lines to `.ziarmy/retro.md` in the target repo: tasks approved/total, breakdown corrections the advisor made, reviewer verdict counts, one lesson. Future runs read it before decomposing — the only feature here that compounds.
 
 ## Reviewer fix authority (v1.2.0)
 
@@ -85,8 +111,10 @@ claude plugin install ziarmy@ziarmy
 
 ## Updating
 
-The master copies of these skills live in `~/.agents/skills/{dev-team,deploy-team}`. After editing them, re-sync into the plugin, bump the version in both `.claude-plugin/*.json` files, and push:
+The master copies of the skills live in `~/.agents/skills/{dev-team,deploy-team}`; the agents' masters live here in `agents/`. After editing, run the sync script — it copies skills into the plugin, installs agents to `~/.claude/agents/`, and validates:
 
 ```
-cp -R ~/.agents/skills/dev-team ~/.agents/skills/deploy-team ~/.agents/plugins/ziarmy/skills/
+./scripts/sync.sh
 ```
+
+Then bump the version in both `.claude-plugin/*.json` files and push. CI (`.github/workflows/validate.yml`) validates the plugin, checks the versions match across manifests, and auto-tags `vX.Y.Z` on main when the version changes.

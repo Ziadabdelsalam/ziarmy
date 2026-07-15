@@ -21,6 +21,9 @@ Set via the Agent tool's `model` parameter:
 Hard limits (identical to dev-team):
 - **At most 10 agents running concurrently.**
 - **Never spawn a second advisor** — spawn once, escalate later via `SendMessage` to the same agent.
+- **Scale to the job.** Honor user sizing args (`team=N`, `--solo`); a one-artifact deploy is one executor + one reviewer.
+
+**Agent types**: when the ziarmy agents are installed (`~/.claude/agents/` or the ziarmy plugin), spawn by type — `subagent_type: "ziarmy-advisor" / "ziarmy-deploy-executor" / "ziarmy-deploy-reviewer"` (plugin-namespaced: `ziarmy:ziarmy-deploy-executor`, …). Draft-only and no-secrets guardrails are baked in; the spawn prompt carries only task-specific lines. Fallback: `general-purpose` with the `model` param and the full templates in `references/role-prompts.md`.
 
 ## Communication — caveman mode
 
@@ -43,7 +46,8 @@ Spend tokens on artifacts and verification, not on talk. Detail lives in the dep
 1. Locate what is being shipped: the dev-team plan file (`<scratchpad>/team-plan.md`) if this follows a dev-team run, otherwise the current branch. Confirm the working tree is clean, tests pass, and note the exact commit SHA being deployed.
 2. Inventory the deployment surface: `gh repo view` for repo state, existing Dockerfiles / workflow files / manifests / provider configs, and how the project is built (run `graphify query` first when `graphify-out/graph.json` exists).
 3. Confirm the provider with the user (Iron Rule 1) plus the target environment (preview/staging vs production) and image registry if containers are involved.
-4. Write a **deploy plan** to `<scratchpad>/deploy-plan.md`: provider decision, commit SHA, task list with IDs, exclusive file ownership, dependencies, and a done-check per task. Agents receive the file path plus their task ID.
+4. Write a **deploy plan** to `<scratchpad>/deploy-plan.md` using `assets/deploy-plan-template.md` — keep its field names exactly; agents parse by heading. It carries the provider decision, commit SHA, task list, secrets checklist (names only), ship log, and runbook. Agents receive the file path plus their task ID.
+5. Mirror tasks and ship steps into the harness task list (`TaskCreate` / `TaskUpdate`) for live progress at zero message cost. If `.ziarmy/retro.md` exists, read it first.
 
 ### Step 2 — Advisor kickoff (deployment architecture gate)
 
@@ -86,9 +90,10 @@ Execute in order, only with approved artifacts, checking the advisor's critical-
 
 ### Step 6 — Verify, document, report
 
-1. Post-deploy verification: hit the deployed surface, check logs/status (`gh run watch`, `kubectl rollout status`, provider status CLI).
+1. Post-deploy verification: run the provider's smoke test from `references/provider-playbooks.md` — hit the deployed surface, check logs/status (`gh run watch`, `kubectl rollout status`, provider status CLI). Exit codes alone don't count.
 2. Update the deploy plan file into a **runbook**: what was deployed (SHA, image tag), where, how to roll back, where secrets live.
 3. Report to the user: outcome per task, review findings that mattered, advisor decisions, the live URL/environment, and the rollback path. Report failures faithfully — a red pipeline is reported red.
+4. Append a retro to `.ziarmy/retro.md`: shipped yes/partial/rolled-back, reviewer verdict counts, secrets caught, one lesson. 2–5 lines.
 
 ## Failure handling
 
