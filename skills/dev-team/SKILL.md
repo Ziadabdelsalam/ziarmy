@@ -43,7 +43,7 @@ Decomposition quality decides everything downstream. Before spawning anything:
 
 ### Step 2 — Advisor kickoff (architecture gate)
 
-Spawn the single Fable 5 advisor **before any executor**, with `run_in_background: false`, passing the plan file path. Ask it to:
+Spawn the single Fable 5 advisor **before any executor**, with `run_in_background: false`, passing the plan file path. When `graphify-out/graph.json` exists, instruct it to work from the knowledge graph (`graphify query` / `graphify path` / `graphify explain`) instead of re-reading the codebase — raw files only for specific lines the graph points at. Ask it to:
 - Validate the breakdown: missing tasks, wrong boundaries, hidden coupling between "independent" tasks.
 - Make the upfront architecture decisions the tasks depend on (interfaces, data shapes, patterns to follow).
 - Flag which tasks are **critical items** that must return to it before merge.
@@ -65,9 +65,10 @@ For each wave:
 Every completed executor task gets an Opus 4.8 reviewer (`model: "opus"`) before any dependent task starts and before integration:
 
 - Spawn reviewers in parallel as executor results arrive. Respect the 10-agent cap (running executors + running reviewers ≤ 10).
-- The reviewer receives the task's done-check and owned-file scope, and returns a verdict: **approve** or **must-fix** with concrete findings.
-- **must-fix** → send findings back to an executor (`SendMessage` to the original if still alive, else a fresh Sonnet 5 agent) and re-review. Unreviewed or must-fix work never unblocks dependent tasks.
-- Findings that question the design rather than the implementation → escalate to the advisor (Step 5), not back to the executor.
+- The reviewer receives the task's done-check and owned-file scope, and orients with `graphify query` when `graphify-out/graph.json` exists instead of re-reading the codebase. Verdict: **approve**, **fixed** (see below), or **must-fix**.
+- **Reviewer fix authority**: the reviewer may directly fix the issues it found — strictly scoped to its own listed findings within the task's owned files. After fixing, it re-runs the done-check, reports `VERDICT: fixed` with the finding→fix mapping, and **returns to review-only**; it never refactors beyond its findings or adds anything new.
+- **must-fix** is reserved for findings the reviewer cannot fix inside that scope (needs files outside the task's ownership, or substantial rework) → send back to an executor (`SendMessage` to the original if still alive, else a fresh Sonnet 5 agent) and re-review. Unreviewed or must-fix work never unblocks dependent tasks.
+- Findings that question the design rather than the implementation → escalate to the advisor (Step 5); the reviewer never "fixes" design.
 
 ### Step 5 — Escalation to the advisor
 

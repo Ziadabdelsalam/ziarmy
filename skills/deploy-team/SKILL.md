@@ -47,7 +47,7 @@ Spend tokens on artifacts and verification, not on talk. Detail lives in the dep
 
 ### Step 2 — Advisor kickoff (deployment architecture gate)
 
-Spawn the single Fable 5 advisor (`run_in_background: false`) with the deploy plan path. Ask it to decide:
+Spawn the single Fable 5 advisor (`run_in_background: false`) with the deploy plan path. When `graphify-out/graph.json` exists, instruct it to work from the knowledge graph (`graphify query` / `graphify path` / `graphify explain`) instead of re-reading the codebase — raw files only for specific lines the graph points at. Ask it to decide:
 - Pipeline shape: what CI must run, build strategy (multi-stage Docker, provider build, mobile build), artifact flow from commit to running deployment.
 - Security posture: secret inventory and where each lives, registry auth, least-privilege tokens, what must never land in git.
 - Rollout and rollback: how the deploy is verified, how it is rolled back, and which steps are **critical items** requiring its sign-off before the manager executes them.
@@ -68,7 +68,11 @@ Prompt templates are in `references/role-prompts.md`; per-provider checklists in
 
 ### Step 4 — Review between tasks (the gate)
 
-Every artifact gets an Opus 4.8 reviewer before the manager commits or uses it, in parallel as executor results arrive (10-agent cap applies). Reviewers check, beyond correctness: **no secrets or tokens in any file**, pinned versions (base images, actions by SHA/major), least privilege, health checks and rollback paths present, and provider-playbook conformance. Verdicts: **approve** / **must-fix** (back to an executor) / **ESCALATE** (design concern → advisor via `SendMessage`).
+Every artifact gets an Opus 4.8 reviewer before the manager commits or uses it, in parallel as executor results arrive (10-agent cap applies). Reviewers orient with `graphify query` when `graphify-out/graph.json` exists instead of re-reading the codebase, and check, beyond correctness: **no secrets or tokens in any file**, pinned versions (base images, actions by SHA/major), least privilege, health checks and rollback paths present, and provider-playbook conformance.
+
+Verdicts: **approve** / **fixed** / **must-fix** / **ESCALATE** (design concern → advisor via `SendMessage`):
+- **Reviewer fix authority**: the reviewer may directly fix the issues it found — strictly its own listed findings, within the artifact's owned files, re-running the dry-run done-check after. Then it **returns to review-only**: no extra changes beyond its findings. Fixing never extends to shipping — the draft-only rule still binds reviewers.
+- **must-fix** is reserved for findings outside that scope (other files, substantial rework) → back to an executor and re-review.
 
 ### Step 5 — Gated ship sequence (manager only)
 
