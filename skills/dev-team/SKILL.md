@@ -90,7 +90,8 @@ The advisor's answer is binding; record it in the plan file so later waves see i
 ### Step 6 — Integrate and verify
 
 After the final wave clears review:
-1. Run the full test suite (and the project's verify skill, if any) from the manager session.
+1. **Integrator gate** (see the `integrator` skill): spawn exactly one `ziarmy-integrator` (Opus 4.8) with the plan file — it checks the seams between tasks' owned files, runs the full suite, and drives the real flows. GO/FIXED-GO → proceed. NO-GO → forward its ADVISOR BRIEF verbatim to the advisor, run the advisor's fix tasks as a normal wave (executors + reviewers), then `SendMessage` the same integrator to re-verify. Two NO-GO rounds on the same seam → the decision goes to the user.
+1b. Run the project's verify skill, if any, from the manager session.
 2. If worktrees were used, merge them back sequentially, running tests after each merge.
 3. Run `graphify update .` if the project keeps a knowledge graph.
 4. Report to the user: what was built, task-by-task outcomes, review findings that mattered, advisor decisions made, and anything skipped or deferred.

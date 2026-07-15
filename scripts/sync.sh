@@ -6,7 +6,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SKILLS="${ZIARMY_SKILLS_DIR:-$HOME/.agents/skills}"
 
-for s in dev-team deploy-team; do
+for s in dev-team deploy-team integrator; do
   if [ ! -d "$SKILLS/$s" ]; then
     echo "master not found: $SKILLS/$s (set ZIARMY_SKILLS_DIR to override)" >&2
     exit 1

@@ -38,6 +38,14 @@ meta:
 ## Escalations log
 <!-- Manager appends: {T#} — question → advisor decision (one line each). -->
 
+## Integration
+<!-- Filled by the integrator gate (integrator skill). Fix tasks get F# IDs, appended under ## Tasks. -->
+- verdict: pending | GO | FIXED-GO | NO-GO
+- rounds: {n}
+- e2e: {what was run/driven}
+- seam findings: {one line each, or none}
+- fix tasks: {F# ids, or none}
+
 ## Retro (filled at end of run)
 - tasks: {approved}/{total}, deferred: {ids or none}
 - breakdown corrections by advisor: {count + one-line what}

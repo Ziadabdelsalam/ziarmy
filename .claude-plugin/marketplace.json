@@ -5,15 +5,15 @@
     "email": "ziad_abdelsalam@outlook.com"
   },
   "metadata": {
-    "description": "Ziarmy — personal multi-agent team skills: build with dev-team, ship with deploy-team",
-    "version": "1.3.0"
+    "description": "Ziarmy — personal multi-agent team skills: build with dev-team, verify with integrator, ship with deploy-team",
+    "version": "1.4.0"
   },
   "plugins": [
     {
       "name": "ziarmy",
       "source": "./",
-      "description": "Multi-agent development force: dev-team decomposes complex work into a dependency-ordered task graph and runs it with parallel Sonnet 5 executors, Opus 4.8 reviewers between tasks, and a single Fable 5 advisor (max 10 concurrent agents). deploy-team takes the finished build and handles GitHub repo/CI, Docker builds, image pushes, Kubernetes, or provider-native deploys — provider chosen by the user, production gated behind explicit confirmation. Caveman mode: one-line statuses, one-line questions, hard-capped agent reports.",
-      "version": "1.3.0",
+      "description": "Multi-agent development force: dev-team decomposes complex work into a dependency-ordered task graph and runs it with parallel Sonnet 5 executors, Opus 4.8 reviewers between tasks, and a single Fable 5 advisor (max 10 concurrent agents). integrator is the end-to-end gate — one Opus 4.8 agent that checks the seams between tasks, fixes slips, and owns GO/NO-GO, escalating structural issues to the advisor. deploy-team takes the finished build and handles GitHub repo/CI, Docker builds, image pushes, Kubernetes, or provider-native deploys — provider chosen by the user, production gated behind explicit confirmation. Caveman mode: one-line statuses, one-line questions, hard-capped agent reports.",
+      "version": "1.4.0",
       "author": {
         "name": "Ziad Abdelsalam"
       },

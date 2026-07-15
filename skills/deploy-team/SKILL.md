@@ -43,7 +43,7 @@ Spend tokens on artifacts and verification, not on talk. Detail lives in the dep
 
 ### Step 1 — Handoff intake
 
-1. Locate what is being shipped: the dev-team plan file (`<scratchpad>/team-plan.md`) if this follows a dev-team run, otherwise the current branch. Confirm the working tree is clean, tests pass, and note the exact commit SHA being deployed.
+1. Locate what is being shipped: the dev-team plan file (`<scratchpad>/team-plan.md`) if this follows a dev-team run, otherwise the current branch. Confirm the working tree is clean, tests pass, and note the exact commit SHA being deployed. If the build came from a multi-agent run, an integrator **GO verdict** (see the `integrator` skill — check the plan file's `## Integration` section, run the gate if missing) is a prerequisite for the ship sequence.
 2. Inventory the deployment surface: `gh repo view` for repo state, existing Dockerfiles / workflow files / manifests / provider configs, and how the project is built (run `graphify query` first when `graphify-out/graph.json` exists).
 3. Confirm the provider with the user (Iron Rule 1) plus the target environment (preview/staging vs production) and image registry if containers are involved.
 4. Write a **deploy plan** to `<scratchpad>/deploy-plan.md` using `assets/deploy-plan-template.md` — keep its field names exactly; agents parse by heading. It carries the provider decision, commit SHA, task list, secrets checklist (names only), ship log, and runbook. Agents receive the file path plus their task ID.

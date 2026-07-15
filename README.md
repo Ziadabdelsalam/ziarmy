@@ -1,12 +1,13 @@
 # Ziarmy
 
-A Claude Code plugin bundling two multi-agent team skills — **dev-team** builds, **deploy-team** ships. The main session acts as the manager (coordinates only, never implements); the work is done by a team of agents with a fixed model orchestration:
+A Claude Code plugin bundling three multi-agent team skills — **dev-team** builds, **integrator** verifies it all works together, **deploy-team** ships. The main session acts as the manager (coordinates only, never implements); the work is done by a team of agents with a fixed model orchestration:
 
 | Role | Model | Count | Job |
 |---|---|---|---|
 | Manager | main session | 1 | Break down, dispatch, integrate, ship |
 | Executor | Sonnet 5 (`model: "sonnet"`) | many | Implement one task in parallel with the others |
 | Reviewer | Opus 4.8 (`model: "opus"`) | many | Gate every task before dependent work proceeds |
+| Integrator | Opus 4.8 (`model: "opus"`) | **exactly 1** | End-to-end gate: seams between tasks, GO/NO-GO |
 | Advisor | Fable 5 (`model: "fable"`) | **exactly 1** | Architecture decisions and critical items |
 
 - **Cap** — at most 10 agents running concurrently, and the team scales to the job: `team=N` / `--solo` sizing args are honored, so a two-file change never spins up a 10-agent army.
@@ -21,6 +22,7 @@ The roles aren't just prompts — the plugin ships real agent definitions in `ag
 | `ziarmy-advisor` | Fable 5 | Read-only: no Write/Edit, no subagent spawning |
 | `ziarmy-executor` | Sonnet 5 | Full dev tools; cannot spawn subagents |
 | `ziarmy-reviewer` | Opus 4.8 | Can edit (fix authority) but not spawn subagents |
+| `ziarmy-integrator` | Opus 4.8 | Seam-slip fix authority only; never redesigns, commits, or ships |
 | `ziarmy-deploy-executor` | Sonnet 5 | Draft-only + no-secrets rules baked into the system prompt |
 | `ziarmy-deploy-reviewer` | Opus 4.8 | Secrets scan first; fix authority; drafts only |
 
@@ -40,6 +42,12 @@ How it works:
 5. **Integrate & verify** — full test suite, then a compact report. Deployable work is offered as a handoff to deploy-team.
 
 No task disappears silently: every task ID ends approved, deferred with a reason, or cancelled by the user.
+
+### integrator — verify the whole
+
+Per-task reviewers see one task inside its file boundary; integration bugs live *between* boundaries. After the final dev-team wave clears review (or standalone, on "does it all work together"), exactly one integrator agent checks the seams — contracts, data shapes, naming across ownership boundaries, using `graphify path` when a knowledge graph exists — runs the full suite, and **drives the real flows**, not just exit codes.
+
+Outcomes: **GO** → proceed. **FIXED-GO** → it fixed seam slips itself (only its own findings, minimal diffs, suite re-run). **NO-GO** → it writes an ADVISOR BRIEF that the manager forwards verbatim to the advisor; the advisor answers with fix tasks that run through the normal dev-team machinery (executors implement, reviewers gate), and the same integrator re-verifies. Two NO-GO rounds on the same seam → the decision goes to the user, never a silent loop. A GO verdict is a prerequisite before deploy-team will start its ship sequence on a multi-agent build.
 
 ### deploy-team — ship
 
